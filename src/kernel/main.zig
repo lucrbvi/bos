@@ -1,4 +1,7 @@
-const console = @import("console.zig");
+const console = @import("vga_console.zig");
+const std = @import("std");
+
+const Allocator = std.mem.Allocator;
 
 const MultibootHeader = extern struct {
     magic: u32,
@@ -15,15 +18,50 @@ export var multiboot align(4) linksection(".multiboot") = MultibootHeader{
     .checksum = @truncate((-%@as(u32, MB1_MAGIC) -% FLAGS)),
 };
 
-export fn _start() noreturn {
-    main();
-    while (true) {}
+const IoMode = enum(u4) {
+    None = 0,
+    VGA = 1,
+};
+
+fn loop() noreturn {
+    while(true) {}
 }
 
-pub fn main() void {
+var err_buffer: [1000]u8 = undefined;
+var err_fba = std.heap.FixedBufferAllocator.init(&err_buffer);
+
+var tmode = IoMode.None;
+
+export fn _start() noreturn {
+    tmode = IoMode.VGA;
+
+    main() catch |err| {
+        kpanic(err, "main()");
+    };
+    loop();
+}
+
+pub fn kpanic(err: anyerror, comptime src: []const u8) void { 
+    const alloc = err_fba.allocator();
+
+    return switch(tmode) {
+        IoMode.VGA => {
+            console.setForegroundColor(.Black);
+            console.printf(alloc, "Kernel panic: {} from {s}", .{err, src}) catch {};
+            loop();
+        },
+        else => loop(),
+    };
+}
+
+pub fn main() !void {
+    var buffer: [1000]u8 = undefined;
+    var fba = std.heap.FixedBufferAllocator.init(&buffer);
+    const alloc = fba.allocator();
+
     console.setColors(.White, .Cyan);
     console.clear();
-    console.putString("Hello, World");
+    try console.printf(alloc, "Hello, {s}", .{"World"});
     console.setForegroundColor(.LightRed);
-    console.putString("!");
+    console.putChar('!');
 }

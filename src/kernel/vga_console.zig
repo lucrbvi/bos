@@ -1,8 +1,10 @@
 ///! VGA Text Mode Console
 
-const fmt = @import("std").fmt;
-const mem = @import("std").mem;
-const Writer = @import("std").io.Writer;
+const std = @import("std");
+const fmt = std.fmt;
+const mem = std.mem;
+
+const Allocator = std.mem.Allocator;
 
 const VGA_WIDTH = 80;
 const VGA_HEIGHT = 25;
@@ -102,15 +104,8 @@ pub fn putString(data: []const u8) void {
     }
 }
 
-pub const writer = Writer(void, error{}, callback) {
-    .context = {}
-};
-
-fn callback(_: void, string: []const u8) error{}!usize {
-    putString(string);
-    return string.len;
-}
-
-pub fn printf(comptime format: []const u8, args: anytype) void {
-    fmt.format(writer, format, args) catch unreachable;
+pub fn printf(allocator: Allocator, comptime fmt_: []const u8, args: anytype) !void {
+    const result = try fmt.allocPrint(allocator, fmt_, args);
+    defer allocator.free(result);
+    putString(result);
 }
