@@ -1,25 +1,29 @@
+const console = @import("console.zig");
 
-const VGA_BUFFER: *volatile [80 * 25]u16 = @ptrFromInt(0xB8000);
-
-const VGAColor = enum(u4) {
-    Black = 0,
-    White = 15,
+const MultibootHeader = extern struct {
+    magic: u32,
+    flags: u32,
+    checksum: u32,
 };
 
-fn vgaEntry(char: u8, color: VGAColor) u16 {
-    return @as(u16, char) | (@as(u16, @intFromEnum(color)) << 8);
-}
+const MB1_MAGIC: u32 = 0x1BADB002;
+const FLAGS: u32 = 0x00000000;
 
-fn print(str: []const u8) void {
-    for (str, 0..) |char, i| {
-        VGA_BUFFER[i] = vgaEntry(char, .White);
-    }
-}
+export var multiboot align(4) linksection(".multiboot") = MultibootHeader{
+    .magic = MB1_MAGIC,
+    .flags = FLAGS,
+    .checksum = @truncate((-%@as(u32, MB1_MAGIC) -% FLAGS)),
+};
 
 export fn _start() noreturn {
-    print("Hello BOS");
+    main();
+    while (true) {}
+}
 
-    while (true) {
-        asm volatile ("hlt");
-    }
+pub fn main() void {
+    console.setColors(.White, .Cyan);
+    console.clear();
+    console.putString("Hello, World");
+    console.setForegroundColor(.LightRed);
+    console.putString("!");
 }

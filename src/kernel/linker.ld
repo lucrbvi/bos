@@ -1,0 +1,23 @@
+ENTRY(_start)
+
+SECTIONS {
+    . = 1M;
+
+    .multiboot ALIGN(4) :
+    {
+        KEEP(*(.multiboot))
+    }
+
+    .text :
+    {
+        *(.text)
+    }
+
+    .rodata : ALIGN(4K) {
+        *(.rodata)
+    }
+
+    .data : ALIGN(4K) {
+        *(.data)
+    }
+}
