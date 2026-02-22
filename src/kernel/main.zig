@@ -45,7 +45,7 @@ export fn _boot() callconv(.naked) noreturn {
         \\call _start
         \\hlt
     );
-    unreachable;
+    // unreachable;
 }
 
 // True fun
@@ -77,8 +77,7 @@ export fn _start() noreturn {
 pub fn main() !void {
     console.setColors(.White, .Cyan);
     console.clear();
-    console.printf("Hello, {s}!\n\n", .{"World"});
-    console.printf("This is Basic Operating System. Welcome.\n", .{});
+    console.printf("This is Basic Operating System. {s}.\n", .{"Welcome"});
 }
 
 pub fn kpanic(err: anyerror, comptime src: []const u8) noreturn {
