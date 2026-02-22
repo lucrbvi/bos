@@ -1,4 +1,4 @@
-ENTRY(_start)
+ENTRY(_boot)
 
 SECTIONS {
     . = 1M;
@@ -6,18 +6,20 @@ SECTIONS {
     .multiboot ALIGN(4) : {
       KEEP(*(.multiboot))
     }
+    .rodata : ALIGN(16) {
+      *(.rodata .rodata.*)
+    }
     .text : {
-      *(.text)
+      *(.text .text.*)
     }
-    .rodata : ALIGN(4K) {
-      *(.rodata)
+    .data : ALIGN(16) {
+      *(.data .data.*)
     }
-    .data : ALIGN(4K) {
-      *(.data)
-    }
-
-    .bss : ALIGN(4K) {
-        *(COMMON)
-        *(.bss)
+    .bss : ALIGN(16) {
+      *(COMMON)
+      *(.bss .bss.*)
+      . = ALIGN(16);
+      . += 6384;
+      stack_top = .;
     }
 }

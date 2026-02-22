@@ -1,8 +1,4 @@
-const console = @import("vga_console.zig");
-const std = @import("std");
-
-const Allocator = std.mem.Allocator;
-
+// GRUB multiboot
 const MultibootHeader = extern struct {
     magic: u32,
     flags: u32,
@@ -18,17 +14,32 @@ export var multiboot align(4) linksection(".multiboot") = MultibootHeader{
     .checksum = @truncate((-%@as(u32, MB1_MAGIC) -% FLAGS)),
 };
 
+// Booting
+export fn _boot() callconv(.naked) noreturn {
+    asm volatile (
+        \\movl $stack_top, %esp
+        \\andl $-16, %esp
+        \\subl $12, %esp
+        \\call _start
+        \\hlt
+    );
+    unreachable;
+}
+
+// True fun
+const console = @import("vga_console.zig");
+const std = @import("std");
+
+const Allocator = std.mem.Allocator;
+
 const IoMode = enum(u4) {
     None = 0,
     VGA = 1,
 };
 
 fn loop() noreturn {
-    while(true) {}
+    while (true) {}
 }
-
-var err_buffer: [1000]u8 = undefined;
-var err_fba = std.heap.FixedBufferAllocator.init(&err_buffer);
 
 var tmode = IoMode.None;
 
@@ -41,27 +52,23 @@ export fn _start() noreturn {
     loop();
 }
 
-pub fn kpanic(err: anyerror, comptime src: []const u8) void { 
-    const alloc = err_fba.allocator();
-
-    return switch(tmode) {
-        IoMode.VGA => {
-            console.setForegroundColor(.Black);
-            console.printf(alloc, "Kernel panic: {} from {s}", .{err, src}) catch {};
-            loop();
-        },
-        else => loop(),
-    };
-}
-
 pub fn main() !void {
-    var buffer: [1000]u8 = undefined;
-    var fba = std.heap.FixedBufferAllocator.init(&buffer);
-    const alloc = fba.allocator();
-
     console.setColors(.White, .Cyan);
     console.clear();
-    try console.printf(alloc, "Hello, {s}", .{"World"});
-    console.setForegroundColor(.LightRed);
-    console.putChar('!');
+    console.printf("Hello, {s}!\n\n", .{"World"});
+    console.printf("This is Basic Operating System. Welcome.\n", .{});
+}
+
+pub fn kpanic(err: anyerror, comptime src: []const u8) noreturn {
+    switch (tmode) {
+        IoMode.VGA => {
+            console.setColors(.White, .Cyan);
+            console.clear();
+            console.setLocation(0, 0);
+            console.setForegroundColor(.Black);
+            console.printf("Kernel panic in {s}: {}", .{ src, err });
+        },
+        else => {},
+    }
+    loop();
 }

@@ -76,8 +76,8 @@ pub fn clear() void {
 
 /// Sets the current cursor location.
 pub fn setLocation(x: u8, y: u8) void {
-  row = x % VGA_WIDTH;
-  column = y & VGA_HEIGHT;
+    column = x % VGA_WIDTH;
+    row = y % VGA_HEIGHT;
 }
 
 /// Puts a character at the specific coordinates using the specified color.
@@ -88,13 +88,20 @@ fn putCharAt(c: u8, newColor: u8, x: usize, y: usize) void {
 
 /// Prints a single character
 pub fn putChar(c: u8) void {
-    putCharAt(c, color, column, row);
-    column += 1;
-    if (column == VGA_WIDTH) {
+    if (c == '\n') {
         column = 0;
         row += 1;
         if (row == VGA_HEIGHT)
             row = 0;
+    } else {
+        putCharAt(c, color, column, row);
+        column += 1;
+        if (column == VGA_WIDTH) {
+            column = 0;
+            row += 1;
+            if (row == VGA_HEIGHT)
+                row = 0;
+        }
     }
 }
 
@@ -104,8 +111,10 @@ pub fn putString(data: []const u8) void {
     }
 }
 
-pub fn printf(allocator: Allocator, comptime fmt_: []const u8, args: anytype) !void {
-    const result = try fmt.allocPrint(allocator, fmt_, args);
-    defer allocator.free(result);
-    putString(result);
+pub fn printf(comptime fmt_: []const u8, args: anytype) void {
+    var buf: [512]u8 = undefined;
+    var w = std.Io.Writer.fixed(&buf);
+    w.print(fmt_, args) catch {};
+    const written = w.buffered();
+    putString(written);
 }
