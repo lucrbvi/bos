@@ -1,18 +1,40 @@
 // GRUB multiboot
 const MultibootHeader = extern struct {
     magic: u32,
-    flags: u32,
+    arch: u32,
+    header_length: u32,
     checksum: u32,
 };
 
-const MB1_MAGIC: u32 = 0x1BADB002;
-const FLAGS: u32 = 0x00000000;
-
-export var multiboot align(4) linksection(".multiboot") = MultibootHeader{
-    .magic = MB1_MAGIC,
-    .flags = FLAGS,
-    .checksum = @truncate((-%@as(u32, MB1_MAGIC) -% FLAGS)),
+const MultibootTagEnd = extern struct {
+    type: u32,
+    flags: u32,
+    size: u32,
 };
+
+const MultibootFull = extern struct {
+    header: MultibootHeader,
+    end_tag: MultibootTagEnd,
+};
+
+const MB2_MAGIC: u32 = 0xe85250d6;
+const MB2_ARCH_X86: u32 = 0;
+const MB2_HEADER_LENGTH: u32 = 16 + 8; // header + end tag
+
+export var multiboot align(8) linksection(".multiboot") =
+    MultibootFull{
+        .header = .{
+            .magic = MB2_MAGIC,
+            .arch = MB2_ARCH_X86,
+            .header_length = MB2_HEADER_LENGTH,
+            .checksum = -%(MB2_MAGIC +% MB2_ARCH_X86 +% MB2_HEADER_LENGTH),
+        },
+        .end_tag = .{
+            .type = 0,
+            .flags = 0,
+            .size = 8,
+        },
+    };
 
 // Booting
 export fn _boot() callconv(.naked) noreturn {

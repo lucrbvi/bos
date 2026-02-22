@@ -3,7 +3,7 @@ ENTRY(_boot)
 SECTIONS {
     . = 1M;
 
-    .multiboot ALIGN(4) : {
+    .multiboot ALIGN(8) : {
       KEEP(*(.multiboot))
     }
     .rodata : ALIGN(16) {
