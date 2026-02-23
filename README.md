@@ -13,9 +13,9 @@ The kernel can boot with GNU GRUB on x86 systems.
 
 1. Check if you have Zig (0.15+), GRUB, and QEMU installed.
 2. Run `zig build -Doptimize=ReleaseFast`.
-3. Run the kernel in QEMU with `qemu-system-i386 -cdrom kernel.iso -m 20M`
+3. Run the kernel in QEMU with `qemu-system-i386 -cdrom kernel.iso -m 20M -serial stdio`
 4. Enjoy!
-5. (I recommend running `zig build -Doptimize=ReleaseFast && qemu-system-i386 -cdrom kernel.iso -m 20M` when doing small changes/tweaking)
+5. (I recommend running `zig build -Doptimize=ReleaseFast && qemu-system-i386 -cdrom kernel.iso -m 20M -serial stdio` when doing small changes/tweaking)
 
 ## How to Debug It
 

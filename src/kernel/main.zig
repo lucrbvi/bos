@@ -51,6 +51,7 @@ export fn _boot() callconv(.naked) noreturn {
 // True fun
 const console = @import("vga_console.zig");
 const std = @import("std");
+const io = @import("io.zig");
 
 const Allocator = std.mem.Allocator;
 
@@ -64,9 +65,22 @@ fn loop() noreturn {
 }
 
 var tmode = IoMode.None;
+var ser = io.Serial{};
+var ioserinit: bool = true;
+var ioser: bool = true;
 
 export fn _start() noreturn {
     tmode = IoMode.VGA;
+
+    if (!ser.init()) {
+        ioserinit = false;
+    }
+
+    if (!ser.canTransmit()) {
+        ioser = false;
+    }
+
+    klog("I/O Serial COM: OK", .{});
 
     main() catch |err| {
         kpanic(err, "main()");
@@ -75,9 +89,25 @@ export fn _start() noreturn {
 }
 
 pub fn main() !void {
+    klog("Start of main()", .{});
+
     console.setColors(.White, .Cyan);
     console.clear();
-    console.printf("This is Basic Operating System. {s}.\n", .{"Welcome"});
+
+    if (!ioserinit) {
+        console.setForegroundColor(.Black);
+        console.printf("I/O Serial init: ERROR\n", .{});
+    }
+
+    if (!ioser) {
+        console.setForegroundColor(.Black);
+        console.printf("I/O Serial COM: ERROR\n", .{});
+    }
+
+    console.setForegroundColor(.White);
+    console.printf("This is Basic Operating System. {s}.\n\n", .{"Welcome"});
+
+    klog("End of main()", .{});
 }
 
 pub fn kpanic(err: anyerror, comptime src: []const u8) noreturn {
@@ -92,4 +122,20 @@ pub fn kpanic(err: anyerror, comptime src: []const u8) noreturn {
         else => {},
     }
     loop();
+}
+
+/// Log to Serial COM Port for another machine (or VM like QEMU)
+pub fn klog(comptime msg: []const u8, args: anytype) void {
+    var buf: [512]u8 = undefined;
+    var buf2: [512]u8 = undefined;
+
+    var w = std.Io.Writer.fixed(&buf);
+    w.print(msg, args) catch {};
+    const written = w.buffered();
+
+    var z = std.Io.Writer.fixed(&buf2);
+    z.print("k: {s}\n", .{written}) catch {};
+    const zritten = z.buffered();
+
+    ser.write(zritten);
 }
