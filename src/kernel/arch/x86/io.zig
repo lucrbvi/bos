@@ -1,6 +1,3 @@
-///! Handle Input/Output operations with the CPU like Serial Communication Ports
-
-/// Output a value to a port
 pub inline fn outb(port: u16, value: u8) void {
     asm volatile (
         \\outb %[v], %[p]
@@ -10,12 +7,11 @@ pub inline fn outb(port: u16, value: u8) void {
     );
 }
 
-/// Fetch the value from a port
 pub inline fn inb(port: u16) u8 {
     var value: u8 = 0;
     asm volatile (
         \\inb %[p], %[v]
-        : [v] "={al}" (value)
+        : [v] "={al}" (value),
         : [p] "{dx}" (port),
     );
     return value;
@@ -61,7 +57,7 @@ pub const Serial = struct {
     }
 
     pub fn read(self: *Serial) u8 {
-        while (self.received()){}
+        while (self.received()) {}
         return inb(self.base);
     }
 

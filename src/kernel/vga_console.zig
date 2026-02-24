@@ -1,4 +1,7 @@
-///! VGA Text Mode Console
+//! VGA Text Mode Console
+//!
+//! This is only working on x86 architecture.
+//! I've put the code here to not cause a compile error.
 
 const std = @import("std");
 const fmt = std.fmt;
@@ -113,8 +116,6 @@ pub fn putString(data: []const u8) void {
 
 pub fn printf(comptime fmt_: []const u8, args: anytype) void {
     var buf: [512]u8 = undefined;
-    var w = std.Io.Writer.fixed(&buf);
-    w.print(fmt_, args) catch {};
-    const written = w.buffered();
+    const written = std.fmt.bufPrint(&buf, fmt_, args) catch return;
     putString(written);
 }

@@ -1,4 +1,8 @@
 .zig-cache
 zig-out
+iso_dir/boot/grub/grub.cfg
+
 *.elf
 *.iso
+*.img
+*.DS_Store
