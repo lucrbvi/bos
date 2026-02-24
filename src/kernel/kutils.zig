@@ -2,7 +2,6 @@
 
 const std = @import("std");
 const arch = @import("arch/mod.zig");
-const console = @import("vga_console.zig");
 const io = arch.io;
 
 pub const IoMode = enum(u4) {
@@ -16,14 +15,6 @@ pub fn loop() noreturn {
 
 pub fn kpanic(ser: *io.Serial, mode: IoMode, err: anyerror, comptime src: []const u8) noreturn {
     switch (mode) {
-        IoMode.VGA => {
-            console.setColors(.White, .Cyan);
-            console.clear();
-            console.setLocation(0, 0);
-            console.setForegroundColor(.Black);
-            console.printf("Kernel panic in {s}: {}", .{ src, err });
-            klog(ser, "Kernel panic in {s}: {}\n", .{ src, err });
-        },
         else => {
             klog(ser, "Kernel panic in {s}: {}\n", .{ src, err });
         },
@@ -33,6 +24,12 @@ pub fn kpanic(ser: *io.Serial, mode: IoMode, err: anyerror, comptime src: []cons
 
 // FIXME: Does not work on aarch64 due to `std.fmt.bufPrint`
 pub fn klog(ser: *io.Serial, comptime msg: []const u8, args: anytype) void {
+    if (@import("builtin").cpu.arch == .aarch64) {
+        ser.write("k: ");
+        ser.write(msg);
+        return;
+    }
+
     var buf: [500]u8 = undefined;
     const written = std.fmt.bufPrint(&buf, msg, args) catch {
         ser.write("[klog fmt error]\n");

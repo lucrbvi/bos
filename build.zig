@@ -21,7 +21,7 @@ pub fn build(b: *std.Build) !void {
     const grub_modules_dir = b.option(
         []const u8,
         "grub-modules-dir",
-        "Path to GRUB modules dir (ex: /usr/lib/grub/arm64-efi)",
+        "Path to GRUB platform modules directory (required for bootable aarch64 ISO)",
     );
 
     const target = switch (kernel_arch) {
@@ -90,24 +90,23 @@ pub fn build(b: *std.Build) !void {
             "cp", "zig-out/bin/kernel-x86.elf", "iso_dir/boot/kernel.elf",
         }),
         .aarch64 => b.addSystemCommand(&[_][]const u8{
-            "zig",                            "objcopy",                  "-O", "binary",
-            "zig-out/bin/kernel-aarch64.elf", "iso_dir/boot/kernel8.img",
+            "cp", "zig-out/bin/kernel-aarch64.elf", "iso_dir/boot/kernel.elf",
         }),
     };
     stage_kernel.step.dependOn(&kernel.step);
 
     const make_iso = blk: {
-        if (kernel_arch == .aarch64) {
-            if (grub_modules_dir) |dir| {
-                break :blk b.addSystemCommand(&[_][]const u8{
-                    "grub-mkrescue", "-o", iso_name, "--directory", dir, "iso_dir",
-                });
-            }
-
+        if (kernel_arch == .aarch64 and grub_modules_dir == null) {
             std.log.warn(
                 "Building aarch64 ISO with host GRUB modules. Pass -Dgrub-modules-dir=/path/to/arm64-efi for a bootable arm64 ISO.",
                 .{},
             );
+        }
+
+        if (grub_modules_dir) |modules_dir| {
+            break :blk b.addSystemCommand(&[_][]const u8{
+                "grub-mkrescue", "--directory", modules_dir, "-o", iso_name, "iso_dir",
+            });
         }
 
         break :blk b.addSystemCommand(&[_][]const u8{
