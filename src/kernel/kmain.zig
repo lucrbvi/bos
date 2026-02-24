@@ -55,19 +55,26 @@ export fn _start(mbi_addr: usize) noreturn {
         ser.write("k: no framebuffer found in MBI\n");
     }
 
-    klog("Start of main()\n", .{});
+    klog("Start of kmain(0)\n", .{});
 
     kmain() catch |err| {
-        kpanic(err, "kmain()");
+        kpanic(err, "kmain(0)");
     };
 
-    klog("End of main()\n", .{});
+    klog("End of kmain(0)\n", .{});
 
     loop();
 }
 
 pub fn kmain() !void {
+    kutils.kmemchiefInit();
+
+    var mem = kutils.kalloc(50);
+    mem[0] = 67;
     if (fb) |*f| {
-        f.printf("This is Basic Operating System version 0.0.1; Welcome.\n", .{});
+        f.printf("This is Basic Operating System version 0.0.1; Welcome.\n\n", .{});
+        f.printf("kalloc var of len {any}, first slot {any}\n", .{ mem.len, mem[0] });
+        f.printf("kmemchief count = {}\n", .{kutils.kmemchief.?.map.count()});
+        f.printf("bytes before kernel OOM = {}\n", .{kutils.kmemchief.?.bytesUntilKernelOom()});
     }
 }

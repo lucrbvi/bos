@@ -39,7 +39,15 @@ pub fn kpanic(err: anyerror, comptime src: []const u8) noreturn {
                 fb.printf("Kernel panic in {s}: {}\n", .{ src, err });
             }
         },
-        else => {},
+        else => {
+            if (serial_ctx) |ser| {
+                ser.write("Kernel panic in ");
+                ser.write(src);
+                ser.write(": ");
+                ser.write(@errorName(err));
+                ser.write("\n");
+            }
+        },
     }
     klog("Kernel panic in {s}: {}\n", .{ src, err });
     loop();
@@ -63,3 +71,79 @@ pub fn klog(comptime msg: []const u8, args: anytype) void {
     ser.write("k: ");
     ser.write(written);
 }
+
+const Range = struct {
+    start: usize,
+    end: usize,
+};
+
+const KMemChief = struct {
+    arena: std.heap.ArenaAllocator,
+    map: std.AutoHashMap(u32, Range),
+
+    pub fn init(self: *KMemChief, backing: std.mem.Allocator) void {
+        self.arena = std.heap.ArenaAllocator.init(backing);
+        self.map = std.AutoHashMap(u32, Range).init(self.arena.allocator());
+    }
+
+    pub fn deinit(self: *KMemChief) void {
+        self.map.deinit();
+        self.arena.deinit();
+    }
+
+    pub fn add(self: *KMemChief, pid: u32, range: Range) void {
+        self.map.put(pid, range) catch |err| {
+            klog("kmemchief.add(3) failed: {s}\n", .{@errorName(err)});
+        };
+    }
+
+    pub fn bytesUntilKernelOom(_: *const KMemChief) usize {
+        return kheap.len - kheap_offset;
+    }
+};
+
+pub var kmemchief: ?KMemChief = null;
+var kmemchief_buf: [64 * 1024]u8 = undefined;
+var kmemchief_fba = std.heap.FixedBufferAllocator.init(&kmemchief_buf);
+
+pub fn kmemchiefInit() void {
+    kmemchief = .{
+        .arena = undefined,
+        .map = undefined,
+    };
+    if (kmemchief) |*kc| {
+        kc.init(kmemchief_fba.allocator());
+    }
+}
+
+/// Allocate memory
+pub fn kalloc(size: usize) []u8 {
+    const alignment: usize = 16;
+    const aligned_size = std.mem.alignForward(usize, size, alignment);
+
+    const next = std.math.add(usize, kheap_offset, aligned_size) catch {
+        kpanic(error.OutOfMemory, "kalloc");
+    };
+
+    if (next > kheap.len) {
+        kpanic(error.OutOfMemory, "kalloc");
+    }
+
+    const start = kheap_offset;
+    kheap_offset = next;
+    const out = kheap[start .. start + size];
+    const begin_addr = @intFromPtr(out.ptr);
+
+    const end_addr_excl = std.math.add(usize, begin_addr, size) catch {
+        kpanic(error.OutOfMemory, "kalloc addr overflow");
+    };
+
+    if (kmemchief) |*kc| {
+        kc.add(0, .{ .start = begin_addr, .end = end_addr_excl });
+    }
+    return out;
+}
+
+const kheap_size = 1024 * 1024;
+var kheap: [kheap_size]u8 align(16) = undefined;
+var kheap_offset: usize = 0;

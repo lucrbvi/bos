@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import struct
 import sys
 
@@ -13,8 +11,6 @@ header_size = struct.unpack_from("<I", data, 8)[0]
 flags = struct.unpack_from("<I", data, 12)[0]
 num_glyphs = struct.unpack_from("<I", data, 16)[0]
 charsize = struct.unpack_from("<I", data, 20)[0]
-# height    = struct.unpack_from("<I", data, 24)[0]
-# width     = struct.unpack_from("<I", data, 28)[0]
 
 HAS_UNICODE_TABLE = 0x01
 has_unicode = bool(flags & HAS_UNICODE_TABLE)
@@ -35,9 +31,8 @@ if has_unicode:
                 glyph_idx += 1
                 break
             elif b == 0xFE:
-                i += 1  # séparateur alias, on skip
+                i += 1
             else:
-                # Décode le codepoint UTF-8
                 if b < 0x80:
                     cp = b
                     i += 1
@@ -59,7 +54,6 @@ if has_unicode:
                         | (unicode_table[i + 3] & 0x3F)
                     )
                     i += 4
-                # On garde seulement les codepoints ASCII (0-255)
                 if cp < 256 and cp not in cp_to_glyph:
                     cp_to_glyph[cp] = glyph_idx
 else:

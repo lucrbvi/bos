@@ -91,8 +91,10 @@ pub const Framebuffer = struct {
 
     pub fn printf(self: *Framebuffer, comptime fmt: []const u8, args: anytype) void {
         var buf: [500]u8 = undefined;
-        const written = std.fmt.bufPrint(&buf, fmt, args) catch {
-            self.write("printf formatting error\n");
+        const written = std.fmt.bufPrint(&buf, fmt, args) catch |err| {
+            self.write("kernel.framebuffer.printf(3) formatting error: ");
+            self.write(@errorName(err));
+            self.write("\n");
             return;
         };
         self.write(written);
