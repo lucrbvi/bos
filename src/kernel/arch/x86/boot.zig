@@ -1,6 +1,10 @@
-const MB2_MAGIC: u32 = 0xe85250d6;
-const MB2_ARCH_X86: u32 = 0;
-const MB2_HEADER_LENGTH: u32 = 16 + 16 + 20 + 8; // header(16) + info_req(12+4=16) + fb_tag(20) + end(8) = 60
+const MB2_HEADER_MAGIC: u32 = 0xE85250D6;
+const MB2_BOOTLOADER_MAGIC: u32 = 0x36D76289;
+const MB2_ARCH_I386: u32 = 0;
+
+const MB2_HEADER_TAG_END: u16 = 0;
+const MB2_HEADER_TAG_FRAMEBUFFER: u16 = 5;
+const MB2_HEADER_TAG_OPTIONAL: u16 = 1;
 
 const MultibootHeader = extern struct {
     magic: u32,
@@ -9,57 +13,95 @@ const MultibootHeader = extern struct {
     checksum: u32,
 };
 
-const MultibootInfoReqTag = extern struct {
-    type: u16 = 1,
-    flags: u16 = 0,
-    size: u32 = 12,
-    mbi_tag_type: u32 = 8, // framebuffer info
+const MultibootHeaderTag = extern struct {
+    type: u16,
+    flags: u16,
+    size: u32,
 };
 
 const MultibootFramebufferTag = extern struct {
-    type: u16 = 5, // graphic mode
-    flags: u16 = 0,
-    size: u32 = 20,
-    width: u32 = 1024,
-    height: u32 = 768,
-    depth: u32 = 32,
+    tag: MultibootHeaderTag,
+    width: u32,
+    height: u32,
+    depth: u32,
 };
 
-const MultibootTagEnd = extern struct {
-    type: u32 = 0,
-    flags: u32 = 0,
-    size: u32 = 8,
+const AlignedFramebufferTag = extern struct {
+    tag: MultibootFramebufferTag,
+    pad_to_8: u32 = 0,
 };
 
-const MultibootFull = extern struct {
+const MultibootFullHeader = extern struct {
     header: MultibootHeader,
-    info_req: MultibootInfoReqTag,
-    _pad: u32 = 0,
-    fb_tag: MultibootFramebufferTag,
-    end_tag: MultibootTagEnd,
+    framebuffer: AlignedFramebufferTag,
+    end: MultibootHeaderTag,
 };
 
-export var multiboot align(8) linksection(".multiboot") =
-    MultibootFull{
-        .header = .{
-            .magic = MB2_MAGIC,
-            .arch = MB2_ARCH_X86,
-            .header_length = MB2_HEADER_LENGTH,
-            .checksum = -%(MB2_MAGIC +% MB2_ARCH_X86 +% MB2_HEADER_LENGTH),
+const MB2_HEADER_LENGTH: u32 = @sizeOf(MultibootFullHeader);
+
+comptime {
+    if ((@sizeOf(MultibootFullHeader) & 7) != 0) {
+        @compileError("Multiboot2 header must be 8-byte aligned");
+    }
+}
+
+export var multiboot align(8) linksection(".multiboot") = MultibootFullHeader{
+    .header = .{
+        .magic = MB2_HEADER_MAGIC,
+        .arch = MB2_ARCH_I386,
+        .header_length = MB2_HEADER_LENGTH,
+        .checksum = -%(MB2_HEADER_MAGIC +% MB2_ARCH_I386 +% MB2_HEADER_LENGTH),
+    },
+    .framebuffer = .{
+        .tag = .{
+            .tag = .{
+                .type = MB2_HEADER_TAG_FRAMEBUFFER,
+                .flags = MB2_HEADER_TAG_OPTIONAL,
+                .size = @sizeOf(MultibootFramebufferTag),
+            },
+            .width = 1082,
+            .height = 512,
+            .depth = 32,
         },
-        .info_req = .{},
-        .fb_tag = .{},
-        .end_tag = .{},
-    };
+    },
+    .end = .{
+        .type = MB2_HEADER_TAG_END,
+        .flags = 0,
+        .size = @sizeOf(MultibootHeaderTag),
+    },
+};
 
 export fn _boot() callconv(.naked) noreturn {
+    // init stack and align on 16-byte boundary
     asm volatile (
         \\movl $stack_top, %esp
-        \\andl $-16, %esp
+        \\andl $-8, %esp
         \\subl $12, %esp
-        // EBX has MultiBoot2Info
-        \\pushl %ebx
+    );
+
+    // ecx to 0 + magic check (if fail we keep ecx at 0)
+    asm volatile (
+        \\xorl %ecx, %ecx
+        \\cmpl $0x36D76289, %eax
+        \\jne 1f
+    );
+
+    // init stack in ecx + push ecx
+    asm volatile (
+        \\movl %ebx, %ecx
+        \\1:
+        \\pushl %ecx
+    );
+
+    asm volatile (
         \\call _start
+    );
+
+    // security
+    asm volatile (
+        \\2:
+        \\cli
         \\hlt
+        \\jmp 2b
     );
 }

@@ -1,0 +1,2 @@
+- [GNU GRUB Manual](https://www.gnu.org/software/grub/manual/grub/grub.html)
+- [MultiBoot2 Specification](https://www.gnu.org/software/grub/manual/multiboot2/multiboot.html)

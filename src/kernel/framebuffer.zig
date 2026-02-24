@@ -2,6 +2,8 @@
 //!
 //! Designed to be cross-platform
 
+const std = @import("std");
+
 pub const glyphs: [256][16]u8 = @import("font8x16_data.zig").data;
 
 pub const Framebuffer = struct {
@@ -35,6 +37,8 @@ pub const Framebuffer = struct {
                 self.putPixel(x, y, color);
             }
         }
+        self.cursor_x = 0;
+        self.cursor_y = 0;
     }
 
     pub fn drawChar(
@@ -83,5 +87,14 @@ pub const Framebuffer = struct {
 
     pub fn write(self: *Framebuffer, s: []const u8) void {
         for (s) |c| self.putChar(c);
+    }
+
+    pub fn printf(self: *Framebuffer, comptime fmt: []const u8, args: anytype) void {
+        var buf: [500]u8 = undefined;
+        const written = std.fmt.bufPrint(&buf, fmt, args) catch {
+            self.write("printf formatting error\n");
+            return;
+        };
+        self.write(written);
     }
 };

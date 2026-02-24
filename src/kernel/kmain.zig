@@ -1,10 +1,7 @@
 const arch = @import("arch/mod.zig");
-const Framebuffer = @import("framebuffer.zig").Framebuffer;
-const std = @import("std");
 const io = arch.io;
 const mbi = @import("mbi.zig");
 const kutils = @import("kutils.zig");
-const builtin = @import("builtin");
 
 comptime {
     _ = arch.boot;
@@ -14,9 +11,8 @@ const klog = kutils.klog;
 const kpanic = kutils.kpanic;
 const loop = kutils.loop;
 
-const Allocator = std.mem.Allocator;
+const Framebuffer = @import("framebuffer.zig").Framebuffer;
 
-var tmode = kutils.IoMode.None;
 var ser = io.Serial{};
 var ioserinit: bool = true;
 var ioser: bool = true;
@@ -31,12 +27,19 @@ export fn _start(mbi_addr: usize) noreturn {
         ioser = false;
     }
 
+    kutils.setSerial(&ser);
+
     if (ioserinit and ioser) {
-        klog(&ser, "I/O Serial COM: OK\n", .{});
+        klog("I/O Serial COM: OK\n", .{});
+    } else {
+        klog("I/O Serial COM: FAIL\n", .{});
     }
 
+    _ = ioser;
+    _ = ioserinit;
+
     if (mbi.findFramebuffer(mbi_addr)) |info| {
-        klog(&ser, "k: framebuffer addr=0x{X} pitch={} width={} height={} bpp={}\n", .{ info.addr, info.pitch, info.width, info.height, info.bpp });
+        klog("framebuffer addr=0x{X} pitch={} width={} height={} bpp={}\n", .{ info.addr, info.pitch, info.width, info.height, info.bpp });
 
         fb = Framebuffer{
             .addr = info.addr,
@@ -45,27 +48,26 @@ export fn _start(mbi_addr: usize) noreturn {
             .height = info.height,
             .bpp = info.bpp,
         };
-        fb.?.clear(0x1E1E2E);
+        fb.?.clear(0x000000);
+        kutils.setFramebuffer(&fb.?);
+        kutils.setIoMode(.Framebuffer);
     } else {
         ser.write("k: no framebuffer found in MBI\n");
     }
 
-    klog(&ser, "Start of main()\n", .{});
+    klog("Start of main()\n", .{});
 
     kmain() catch |err| {
-        kpanic(&ser, tmode, err, "kmain()");
+        kpanic(err, "kmain()");
     };
 
-    klog(&ser, "End of main()\n", .{});
+    klog("End of main()\n", .{});
 
     loop();
 }
 
 pub fn kmain() !void {
-    _ = ioser;
-    _ = ioserinit;
-
     if (fb) |*f| {
-        f.write("This is Basic Operating System. Welcome.\n");
+        f.printf("This is Basic Operating System version 0.0.1; Welcome.\n", .{});
     }
 }

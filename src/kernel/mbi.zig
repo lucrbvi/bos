@@ -1,4 +1,4 @@
-//! Parser Multiboot2 Boot Information, partagé x86 + aarch64
+//! Multiboot2 Boot Information Parser
 
 pub const FramebufferInfo = struct {
     addr: u64,

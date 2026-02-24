@@ -6,20 +6,24 @@ SECTIONS {
     .multiboot ALIGN(8) : {
       KEEP(*(.multiboot))
     }
-    .rodata : ALIGN(16) {
-      *(.rodata .rodata.*)
-    }
+
     .text : {
       *(.text .text.*)
     }
-    .data : ALIGN(16) {
+
+    .rodata : ALIGN(8) {
+      *(.rodata .rodata.*)
+    }
+
+    .data : ALIGN(8) {
       *(.data .data.*)
     }
-    .bss : ALIGN(16) {
+
+    .bss : ALIGN(8) {
       *(COMMON)
       *(.bss .bss.*)
       . = ALIGN(16);
-      . += 6384;
+      . += 16384;
       stack_top = .;
     }
 }
