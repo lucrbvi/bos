@@ -1,2 +1,3 @@
 - [GNU GRUB Manual](https://www.gnu.org/software/grub/manual/grub/grub.html)
 - [MultiBoot2 Specification](https://www.gnu.org/software/grub/manual/multiboot2/multiboot.html)
+- ["μ-Kernels Must and Can Be Small" (Jochen Liedtke)](https://os.itec.kit.edu/downloads/publ_1996_liedtke_ukernels-must-be-small.pdf)

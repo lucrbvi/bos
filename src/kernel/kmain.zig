@@ -2,6 +2,8 @@ const arch = @import("arch/mod.zig");
 const io = arch.io;
 const mbi = @import("mbi.zig");
 const kutils = @import("kutils.zig");
+const mem = @import("mem/mod.zig");
+const std = @import("std");
 
 comptime {
     _ = arch.boot;
@@ -67,14 +69,18 @@ export fn _start(mbi_addr: usize) noreturn {
 }
 
 pub fn kmain() !void {
-    kutils.kmemchiefInit();
+    var buffer: [1024 * 100]u8 = undefined;
+    var fba = std.heap.FixedBufferAllocator.init(&buffer);
+    const allocator = fba.allocator();
+    mem.init(allocator);
 
-    var mem = kutils.kalloc(50);
-    mem[0] = 67;
+    var data = try mem.kalloc(0, 10);
+    data[0] = 70;
+    data[9] = 69;
+
     if (fb) |*f| {
         f.printf("This is Basic Operating System version 0.0.1; Welcome.\n\n", .{});
-        f.printf("kalloc var of len {any}, first slot {any}\n", .{ mem.len, mem[0] });
-        f.printf("kmemchief count = {}\n", .{kutils.kmemchief.?.map.count()});
-        f.printf("bytes before kernel OOM = {}\n", .{kutils.kmemchief.?.bytesUntilKernelOom()});
+        mem.kfreePid(0);
+        f.printf("{} - {} = {}\n", .{ data[0], data[9], data[0] - data[9] });
     }
 }
