@@ -2,7 +2,7 @@
 
 *This is not a serious project, just a hobby one to learn some basic operating system concepts.*
 
-The kernel can boot with GNU GRUB on x86 systems (aarch64 soon).
+The kernel can boot with GNU GRUB on x86 and x86_64 systems.
 
 ### Why does this project exists ?
 1. I like Zig

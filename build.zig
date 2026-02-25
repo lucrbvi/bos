@@ -2,7 +2,7 @@ const std = @import("std");
 
 const KernelArch = enum {
     x86,
-    aarch64,
+    x86_64,
 };
 
 pub fn build(b: *std.Build) !void {
@@ -15,7 +15,7 @@ pub fn build(b: *std.Build) !void {
     const kernel_arch = b.option(
         KernelArch,
         "arch",
-        "Kernel architecture target (x86 or aarch64)",
+        "Kernel architecture target (x86, x86_64, or aarch64)",
     ) orelse .x86;
 
     const grub_modules_dir = b.option(
@@ -31,35 +31,28 @@ pub fn build(b: *std.Build) !void {
             .abi = .none,
             .cpu_model = .{ .explicit = &std.Target.x86.cpu.i386 },
         }),
-        .aarch64 => b.resolveTargetQuery(.{
-            .cpu_arch = .aarch64,
+        .x86_64 => b.resolveTargetQuery(.{
+            .cpu_arch = .x86_64,
             .os_tag = .freestanding,
             .abi = .none,
-            .cpu_features_sub = std.Target.aarch64.featureSet(&[_]std.Target.aarch64.Feature{
-                .neon,
-                .fp_armv8,
-                .fullfp16,
-                .fp16fml,
-                .sha2,
-                .aes,
-            }),
+            // .cpu_model = .{ .explicit = &std.Target.x86_64.cpu.x86_64 },
         }),
         // else => @compileError("Unsupported architecture"),
     };
 
     const kernel_name = switch (kernel_arch) {
         .x86 => "kernel-x86.elf",
-        .aarch64 => "kernel-aarch64.elf",
+        .x86_64 => "kernel-x86_64.elf",
     };
 
     const iso_name = switch (kernel_arch) {
         .x86 => "kernel-x86.iso",
-        .aarch64 => "kernel-aarch64.iso",
+        .x86_64 => "kernel-x86_64.iso",
     };
 
     const linker_script = switch (kernel_arch) {
         .x86 => "src/kernel/arch/x86/linker.ld",
-        .aarch64 => "src/kernel/arch/aarch64/linker.ld",
+        .x86_64 => "src/kernel/arch/x86/linker.ld",
     };
 
     const kernel = b.addExecutable(.{
@@ -78,7 +71,7 @@ pub fn build(b: *std.Build) !void {
 
     const grub_cfg_template = switch (kernel_arch) {
         .x86 => "iso_dir/boot/grub/grub-x86.cfg",
-        .aarch64 => "iso_dir/boot/grub/grub-aarch64.cfg",
+        .x86_64 => "iso_dir/boot/grub/grub-x86_64.cfg",
     };
 
     const copy_grub_cfg = b.addSystemCommand(&[_][]const u8{
@@ -89,20 +82,13 @@ pub fn build(b: *std.Build) !void {
         .x86 => b.addSystemCommand(&[_][]const u8{
             "cp", "zig-out/bin/kernel-x86.elf", "iso_dir/boot/kernel.elf",
         }),
-        .aarch64 => b.addSystemCommand(&[_][]const u8{
-            "cp", "zig-out/bin/kernel-aarch64.elf", "iso_dir/boot/kernel.elf",
+        .x86_64 => b.addSystemCommand(&[_][]const u8{
+            "cp", "zig-out/bin/kernel-x86_64.elf", "iso_dir/boot/kernel.elf",
         }),
     };
     stage_kernel.step.dependOn(&kernel.step);
 
     const make_iso = blk: {
-        if (kernel_arch == .aarch64 and grub_modules_dir == null) {
-            std.log.warn(
-                "Building aarch64 ISO with host GRUB modules. Pass -Dgrub-modules-dir=/path/to/arm64-efi for a bootable arm64 ISO.",
-                .{},
-            );
-        }
-
         if (grub_modules_dir) |modules_dir| {
             break :blk b.addSystemCommand(&[_][]const u8{
                 "grub-mkrescue", "--directory", modules_dir, "-o", iso_name, "iso_dir",

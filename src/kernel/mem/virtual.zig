@@ -1,7 +1,6 @@
 //! Track allocated memory slices per PID
 
 const std = @import("std");
-const kutils = @import("../kutils.zig");
 const physical = @import("physical.zig");
 
 const Region = std.ArrayList([]u8);
@@ -11,7 +10,6 @@ var gpa: std.mem.Allocator = undefined;
 pub fn init(allocator: std.mem.Allocator) void {
     gpa = allocator;
     map = .init(allocator);
-    kutils.klog("mem.virtual.init(0): OK\n", .{});
 }
 
 pub fn track(pid: u32, slice: []u8) !void {
