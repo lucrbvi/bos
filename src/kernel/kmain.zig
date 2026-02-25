@@ -1,8 +1,13 @@
+// Copyright Luc ROBERT--VILLANUEVA 2026
+// Distributed under the Boost Software License, Version 1.0
+// (See accompanying file LICENSE or copy at https://www.boost.org/LICENSE_1_0.txt)
+
 const arch = @import("arch/mod.zig");
 const mbi = @import("mbi.zig");
 const kutils = @import("kutils.zig");
 const mem = @import("mem/mod.zig");
 const std = @import("std");
+const builtin = @import("builtin");
 
 comptime {
     _ = arch.boot;
@@ -79,7 +84,7 @@ pub fn kmain() !void {
     data[9] = 69;
 
     if (fb) |*f| {
-        f.printf("This is Basic Operating System version 0.0.1; Welcome.\n\n", .{});
+        f.printf("This is Basic Operating System version 0.0.1 on {s}; Welcome.\n\n", .{@tagName(builtin.cpu.arch)});
         mem.kfree(data[0..8]);
         // use after free - show the data poisonning when free
         f.printf("{} - {} = {}\n", .{ data[0], data[9], data[0] - data[9] });

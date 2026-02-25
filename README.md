@@ -13,10 +13,8 @@ The kernel can boot with GNU GRUB on x86 and x86_64 systems.
 
 1. Check if you have Zig (0.15+), GNU GRUB utilities, and QEMU installed.
 2. Run `zig build -Doptimize=ReleaseFast`.
-3. Run the kernel in QEMU with `qemu-system-i386 -cdrom kernel.iso -m 20M -serial stdio`
+3. Run the kernel in QEMU with `qemu-system-i386 -cdrom kernel-x86.iso -m 20M -serial stdio`
 4. Enjoy!
-5. (I recommend running `zig build -Doptimize=ReleaseFast && qemu-system-i386 -cdrom kernel-x86.iso -m 20M -serial stdio` when doing small changes/tweaking)
-6. (I recommend using `zig build -Darch=aarch64 -Doptimize=ReleaseFast && qemu-system-aarch64 -M virt -cpu cortex-a57 -m 128M -display none -serial stdio -kernel zig-out/bin/kernel-aarch64.elf` to debug aarch64)
 
 ## How to Debug It
 
@@ -26,6 +24,8 @@ The kernel can boot with GNU GRUB on x86 and x86_64 systems.
 4. You should enter `target remote localhost:1234`
 5. Then you can debug!
 
-## How to Develop It
+### Tips for Development
 
 1. Read `RESSOURCES.md`
+2. Run `zig build -Doptimize=ReleaseFast -Darch=x86_64 && qemu-system-x86_64 -cdrom kernel-x86_64.iso -m 40M -serial stdio` to test on x86_64.
+3. Run `zig build -Doptimize=ReleaseFast && qemu-system-i386 -cdrom kernel-x86.iso -m 40M -serial stdio` to test on x86.

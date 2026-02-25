@@ -1,3 +1,7 @@
+// Copyright Luc ROBERT--VILLANUEVA 2026
+// Distributed under the Boost Software License, Version 1.0
+// (See accompanying file LICENSE or copy at https://www.boost.org/LICENSE_1_0.txt)
+
 const MB2_HEADER_MAGIC: u32 = 0xE85250D6;
 const MB2_BOOTLOADER_MAGIC: u32 = 0x36D76289;
 const MB2_ARCH_I386: u32 = 0;
